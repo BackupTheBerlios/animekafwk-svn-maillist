@@ -1,0 +1,768 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<HTML>
+ <HEAD>
+   <TITLE> [Animekafwk-svn] r58 - in trunk: . classes/akfwk tests
+   </TITLE>
+   <LINK REL="Index" HREF="http://lists.berlios.de/pipermail/animekafwk-svn/Week-of-Mon-20080721/index.html" >
+   <LINK REL="made" HREF="mailto:animekafwk-svn%40lists.berlios.de?Subject=Re%3A%20%5BAnimekafwk-svn%5D%20r58%20-%20in%20trunk%3A%20.%20classes/akfwk%20tests&In-Reply-To=%3C200807241226.m6OCQMn6015237%40sheep.berlios.de%3E">
+   <META NAME="robots" CONTENT="index,nofollow">
+   <style type="text/css">
+       pre {
+           white-space: pre-wrap;       /* css-2.1, curent FF, Opera, Safari */
+           }
+   </style>
+   <META http-equiv="Content-Type" content="text/html; charset=us-ascii">
+   
+   
+ </HEAD>
+ <BODY BGCOLOR="#ffffff">
+   <H1>[Animekafwk-svn] r58 - in trunk: . classes/akfwk tests</H1>
+    <B>jrd at users.berlios.de</B> 
+    <A HREF="mailto:animekafwk-svn%40lists.berlios.de?Subject=Re%3A%20%5BAnimekafwk-svn%5D%20r58%20-%20in%20trunk%3A%20.%20classes/akfwk%20tests&In-Reply-To=%3C200807241226.m6OCQMn6015237%40sheep.berlios.de%3E"
+       TITLE="[Animekafwk-svn] r58 - in trunk: . classes/akfwk tests">jrd at users.berlios.de
+       </A><BR>
+    <I>Thu Jul 24 14:26:22 CEST 2008</I>
+    <P><UL>
+        
+        
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#1">[ date ]</a>
+              <a href="thread.html#1">[ thread ]</a>
+              <a href="subject.html#1">[ subject ]</a>
+              <a href="author.html#1">[ author ]</a>
+         </LI>
+       </UL>
+    <HR>  
+<!--beginarticle-->
+<PRE>Author: jrd
+Date: 2008-07-24 14:26:10 +0200 (Thu, 24 Jul 2008)
+New Revision: 58
+
+Modified:
+   trunk/akfwk.inc.php
+   trunk/classes/akfwk/cookie.php
+   trunk/classes/akfwk/db.php
+   trunk/test.sh
+   trunk/tests/akfwkExceptionTest.php
+   trunk/tests/cacheTest.php
+   trunk/tests/cookieTest.php
+   trunk/tests/dbTest.php
+   trunk/tests/queryBuilderTest.php
+   trunk/tests/xmlGeneratorTest.php
+   trunk/tests/xsltGeneratorTest.php
+   trunk/tests/xsltTest.php
+Log:
+FIX: bad handling of cookies. A path must always be defined in order to work everywhere.
+UPD: DB class use references instead of object copy.
+UPD: Try to use PHPUnit last version. Doesn't work for now.
+
+
+Modified: trunk/akfwk.inc.php
+===================================================================
+--- trunk/akfwk.inc.php	2007-01-16 16:23:41 UTC (rev 57)
++++ trunk/akfwk.inc.php	2008-07-24 12:26:10 UTC (rev 58)
+@@ -70,7 +70,7 @@
+   PEAR::setErrorHandling(PEAR_ERROR_CALLBACK, '_handle_pear_error');
+ 
+   // Instanciate a MDB2 handle thus connect to the DB.
+-  $mdb2 = MDB2::singleton(CST_DSN);
++  $mdb2 =&amp; MDB2::singleton(CST_DSN);
+   if (MDB2::isError($mdb2)) {
+     echo &quot;Database down, the website is currently unavailable, please try later.\n&quot;;
+     die(&quot;&lt;hr/&gt;\n{$mdb2-&gt;getMessage()}\n&quot;);
+@@ -79,6 +79,6 @@
+   MDB2::loadFile('Date');
+ 
+   // Instanciate our DB singleton class.
+-  $db = db::getInstance();
++  $db =&amp; db::getInstance();
+   $db-&gt;setMDB2($mdb2);
+ ?&gt;
+
+Modified: trunk/classes/akfwk/cookie.php
+===================================================================
+--- trunk/classes/akfwk/cookie.php	2007-01-16 16:23:41 UTC (rev 57)
++++ trunk/classes/akfwk/cookie.php	2008-07-24 12:26:10 UTC (rev 58)
+@@ -75,12 +75,13 @@
+      * 
+      * @param mixed $name 
+      * @param mixed $value 
++     * @param mixed $path 
+      * @static
+      * @access public
+      */
+     public 
+     static 
+-    function setSession($name, $value) {//{{{
++    function setSession($name, $value, $path) {//{{{
+       setcookie($name, $value);
+       $_COOKIE[$name] = $value;
+     }//}}}
+@@ -90,13 +91,14 @@
+      * 
+      * @param mixed $name 
+      * @param mixed $value 
++     * @param mixed $path 
+      * @static
+      * @access public
+      */
+     public
+     static
+-    function set1Year($name, $value) {//{{{
+-      setcookie($name, $value, time() + 365 * 86400);
++    function set1Year($name, $value, $path) {//{{{
++      setcookie($name, $value, time() + 365 * 86400, $path);
+       $_COOKIE[$name] = $value;
+     }//}}}
+ 
+@@ -106,13 +108,14 @@
+      * @param mixed $name 
+      * @param mixed $value 
+      * @param mixed $validityMin 
++     * @param mixed $path 
+      * @static
+      * @access public
+      */
+     public
+     static
+-    function set($name, $value, $validityMin) {//{{{
+-      setcookie($name, $value, time() + 60 * $validityMin);
++    function set($name, $value, $validityMin, $path) {//{{{
++      setcookie($name, $value, time() + 60 * $validityMin, $path);
+       $_COOKIE[$name] = $value;
+     }//}}}
+ 
+@@ -120,13 +123,14 @@
+      * remove 
+      * 
+      * @param mixed $name 
++     * @param mixed $path 
+      * @static
+      * @access public
+      */
+     public
+     static  
+-    function remove($name) {//{{{
+-      setcookie($name, '', time() - 10);
++    function remove($name, $path) {//{{{
++      setcookie($name, '', time() - 10, $path);
+       unset($_COOKIE[$name]);
+     }//}}}
+   }
+
+Modified: trunk/classes/akfwk/db.php
+===================================================================
+--- trunk/classes/akfwk/db.php	2007-01-16 16:23:41 UTC (rev 57)
++++ trunk/classes/akfwk/db.php	2008-07-24 12:26:10 UTC (rev 58)
+@@ -32,7 +32,7 @@
+    * @license GPL
+    */
+   class db {
+-    protected static $instance;
++    protected static $instance = null;
+     protected $mdb2 = null;
+ 
+     const TXT = 'text';
+@@ -48,7 +48,7 @@
+ 
+     private
+     function __construct() {//{{{
+-      $mdb2 = null;
++      $this-&gt;mdb2 = null;
+     }//}}}
+ 
+     /**
+@@ -61,8 +61,9 @@
+     static
+     function getInstance() {//{{{
+       if (empty(self::$instance)) {
+-        $self = __CLASS__;
+-        self::$instance = new $self();
++        #$self = __CLASS__;
++        #self::$instance =&amp; new $self();
++        self::$instance =&amp; new db();
+       }
+       return self::$instance;
+     }//}}}
+@@ -76,7 +77,7 @@
+      */
+     public
+     function setMDB2(MDB2_Driver_Common $mdb2) {//{{{
+-      $this-&gt;mdb2 = $mdb2;
++      $this-&gt;mdb2 =&amp; $mdb2;
+     }//}}}
+ 
+     /**
+@@ -85,7 +86,7 @@
+      * @return this
+      */
+     public
+-    function getMDB2() {//{{{;
++    function &amp;getMDB2() {//{{{;
+       if (empty($this-&gt;mdb2)) {;
+         throw new akfwkException('db:MDB2 not affected or not instanciated.');
+       };
+@@ -101,8 +102,8 @@
+      */
+     static
+     public
+-    function MDB2() {//{{{
+-      return db::getInstance()-&gt;getMDB2();
++    function &amp;MDB2() {//{{{
++      return self::getInstance()-&gt;getMDB2();
+     }//}}}
+ 
+     /**
+
+Modified: trunk/test.sh
+===================================================================
+--- trunk/test.sh	2007-01-16 16:23:41 UTC (rev 57)
++++ trunk/test.sh	2008-07-24 12:26:10 UTC (rev 58)
+@@ -1,8 +1,7 @@
+ #!/bin/sh
+-ELINKS='OK'
+-which elinks &gt;/dev/null || ELINKS='KO'
+-if [ $ELINKS = 'OK' ]; then
+-  php test.php | elinks -force-html
+-else
+-  php test.php | lynx -stdin
+-fi
++BROWSER=''
++which elinks &gt;/dev/null 2&gt;&amp;1 &amp;&amp; BROWSER='elinks --force-html'
++[ &quot;$BROWSER&quot; = &quot;&quot; ] &amp;&amp; which links &gt;/dev/null 2&gt;&amp;1 &amp;&amp; BROWSER='links -force-html'
++[ &quot;$BROWSER&quot; = &quot;&quot; ] &amp;&amp; which lynx &gt;/dev/null 2&gt;&amp;1 &amp;&amp; BROWSER='lynx -stdin'
++[ &quot;$BROWSER&quot; = &quot;&quot; ] &amp;&amp; BROWSER='less'
++php test.php | $BROWSER
+
+Modified: trunk/tests/akfwkExceptionTest.php
+===================================================================
+--- trunk/tests/akfwkExceptionTest.php	2007-01-16 16:23:41 UTC (rev 57)
++++ trunk/tests/akfwkExceptionTest.php	2008-07-24 12:26:10 UTC (rev 58)
+@@ -1,12 +1,12 @@
+ &lt;?php // vim: set et sta sw=2 ts=2 tw=0 enc=utf8 fenc=utf8 fdm=marker
+   // Call akfwkExceptionTest::main() if this source file is executed directly.
+-  if (! defined(&quot;PHPUnit2_MAIN_METHOD&quot;)) {
+-    define(&quot;PHPUnit2_MAIN_METHOD&quot;, &quot;akfwkExceptionTest::main&quot;);
++  if (! defined(&quot;PHPUnit_MAIN_METHOD&quot;)) {
++    define(&quot;PHPUnit_MAIN_METHOD&quot;, &quot;akfwkExceptionTest::main&quot;);
+   }
+-  require_once &quot;PHPUnit2/Framework/TestCase.php&quot;;
+-  require_once &quot;PHPUnit2/Framework/TestSuite.php&quot;;
++  require_once &quot;PHPUnit/Framework/TestCase.php&quot;;
++  require_once &quot;PHPUnit/Framework/TestSuite.php&quot;;
+   // You may remove the following line when all tests have been implemented.
+-  require_once &quot;PHPUnit2/Framework/IncompleteTestError.php&quot;;
++  require_once &quot;PHPUnit/Framework/IncompleteTestError.php&quot;;
+   require_once &quot;../classes/akfwk/akfwkException.php&quot;;
+ 
+   /**
+@@ -14,7 +14,7 @@
+    * Generated by PHPUnit2_Util_Skeleton on 2006-02-25 at 22:34:23.
+    */
+   class akfwkExceptionTest
+-  extends PHPUnit2_Framework_TestCase {
++  extends PHPUnit_Framework_TestCase {
+     private $fixture;
+     
+     /**
+@@ -26,9 +26,9 @@
+     public
+     static
+     function main() {//{{{
+-      require_once &quot;PHPUnit2/TextUI/TestRunner.php&quot;;
+-      $suite  = new PHPUnit2_Framework_TestSuite(&quot;akfwkExceptionTest&quot;);
+-      $result = PHPUnit2_TextUI_TestRunner::run($suite);
++      require_once &quot;PHPUnit/TextUI/TestRunner.php&quot;;
++      $suite  = new PHPUnit_Framework_TestSuite(&quot;akfwkExceptionTest&quot;);
++      $result = PHPUnit_TextUI_TestRunner::run($suite);
+     }//}}}
+ 
+     /**
+@@ -79,7 +79,7 @@
+     }//}}}
+   }
+   // Call akfwkExceptionTest::main() if this source file is executed directly.
+-  if (PHPUnit2_MAIN_METHOD == &quot;akfwkExceptionTest::main&quot;) {
++  if (PHPUnit_MAIN_METHOD == &quot;akfwkExceptionTest::main&quot;) {
+     akfwkExceptionTest::main();
+   }
+ ?&gt;
+
+Modified: trunk/tests/cacheTest.php
+===================================================================
+--- trunk/tests/cacheTest.php	2007-01-16 16:23:41 UTC (rev 57)
++++ trunk/tests/cacheTest.php	2008-07-24 12:26:10 UTC (rev 58)
+@@ -1,12 +1,12 @@
+ &lt;?php // vim: set et sta sw=2 ts=2 tw=0 enc=utf8 fenc=utf8 fdm=marker
+   // Call cacheTest::main() if this source file is executed directly.
+-  if (! defined(&quot;PHPUnit2_MAIN_METHOD&quot;)) {
+-    define(&quot;PHPUnit2_MAIN_METHOD&quot;, &quot;cacheTest::main&quot;);
++  if (! defined(&quot;PHPUnit_MAIN_METHOD&quot;)) {
++    define(&quot;PHPUnit_MAIN_METHOD&quot;, &quot;cacheTest::main&quot;);
+   }
+-  require_once &quot;PHPUnit2/Framework/TestCase.php&quot;;
+-  require_once &quot;PHPUnit2/Framework/TestSuite.php&quot;;
++  require_once &quot;PHPUnit/Framework/TestCase.php&quot;;
++  require_once &quot;PHPUnit/Framework/TestSuite.php&quot;;
+   // You may remove the following line when all tests have been implemented.
+-  require_once &quot;PHPUnit2/Framework/IncompleteTestError.php&quot;;
++  require_once &quot;PHPUnit/Framework/IncompleteTestError.php&quot;;
+   require_once &quot;../classes/akfwk/cache.php&quot;;
+   require_once &quot;../classes/akfwk/akfwkException.php&quot;;
+   require_once &quot;../akfwk.inc.php&quot;;
+@@ -14,12 +14,12 @@
+ 
+   /**
+    * Test class for cache.
+-   * Generated by PHPUnit2_Util_Skeleton on 2006-02-25 at 22:34:24.
++   * Generated by PHPUnit_Util_Skeleton on 2006-02-25 at 22:34:24.
+    * The framework must have a working config in order to take the tests.
+    * The cache must be active.
+    */
+   class cacheTest
+-  extends PHPUnit2_Framework_TestCase {
++  extends PHPUnit_Framework_TestCase {
+     private $mdb2;
+     
+     /**
+@@ -31,9 +31,9 @@
+     public
+     static
+     function main() {//{{{
+-      require_once &quot;PHPUnit2/TextUI/TestRunner.php&quot;;
+-      $suite  = new PHPUnit2_Framework_TestSuite(&quot;cacheTest&quot;);
+-      $result = PHPUnit2_TextUI_TestRunner::run($suite);
++      require_once &quot;PHPUnit/TextUI/TestRunner.php&quot;;
++      $suite = new PHPUnit_Framework_TestSuite(&quot;cacheTest&quot;);
++      $result = PHPUnit_TextUI_TestRunner::run($suite);
+     }//}}}
+ 
+     /**
+@@ -44,7 +44,7 @@
+      */
+     protected
+     function setUp() {//{{{
+-      $this-&gt;mdb2 = db::MDB2();
++      $this-&gt;mdb2 =&amp; db::MDB2();
+       $sql = 'DELETE FROM ' . cache::table;
+       $this-&gt;mdb2-&gt;exec($sql);
+     }//}}}
+@@ -57,8 +57,7 @@
+      */
+     protected
+     function tearDown() {//{{{
+-      $sql = 'DELETE FROM ' . cache::table;
+-      $this-&gt;mdb2-&gt;exec($sql);
++      $this-&gt;mdb2-&gt;disconnect();
+     }//}}}
+ 
+     /**
+@@ -291,7 +290,7 @@
+   }
+ 
+   // Call cacheTest::main() if this source file is executed directly.
+-  if (PHPUnit2_MAIN_METHOD == &quot;cacheTest::main&quot;) {
++  if (PHPUnit_MAIN_METHOD == &quot;cacheTest::main&quot;) {
+     cacheTest::main();
+   }
+ ?&gt;
+
+Modified: trunk/tests/cookieTest.php
+===================================================================
+--- trunk/tests/cookieTest.php	2007-01-16 16:23:41 UTC (rev 57)
++++ trunk/tests/cookieTest.php	2008-07-24 12:26:10 UTC (rev 58)
+@@ -1,20 +1,20 @@
+ &lt;?php // vim: set et sta sw=2 ts=2 tw=0 enc=utf8 fenc=utf8 fdm=marker
+   // Call cookieTest::main() if this source file is executed directly.
+-  if (! defined(&quot;PHPUnit2_MAIN_METHOD&quot;)) {
+-    define(&quot;PHPUnit2_MAIN_METHOD&quot;, &quot;cookieTest::main&quot;);
++  if (! defined(&quot;PHPUnit_MAIN_METHOD&quot;)) {
++    define(&quot;PHPUnit_MAIN_METHOD&quot;, &quot;cookieTest::main&quot;);
+   }
+-  require_once &quot;PHPUnit2/Framework/TestCase.php&quot;;
+-  require_once &quot;PHPUnit2/Framework/TestSuite.php&quot;;
++  require_once &quot;PHPUnit/Framework/TestCase.php&quot;;
++  require_once &quot;PHPUnit/Framework/TestSuite.php&quot;;
+   // You may remove the following line when all tests have been implemented.
+-  require_once &quot;PHPUnit2/Framework/IncompleteTestError.php&quot;;
++  require_once &quot;PHPUnit/Framework/IncompleteTestError.php&quot;;
+   require_once &quot;../classes/akfwk/cookie.php&quot;;
+ 
+   /**
+    * Test class for cookie.
+-   * Generated by PHPUnit2_Util_Skeleton on 2006-02-25 at 22:34:25.
++   * Generated by PHPUnit_Util_Skeleton on 2006-02-25 at 22:34:25.
+    */
+   class cookieTest
+-  extends PHPUnit2_Framework_TestCase {
++  extends PHPUnit_Framework_TestCase {
+     const cookieDateFmt = 'D, d-M-Y H:i:s T';
+     /**
+      * Runs the test methods of this class.
+@@ -25,9 +25,9 @@
+     public
+     static
+     function main() {//{{{
+-      require_once &quot;PHPUnit2/TextUI/TestRunner.php&quot;;
+-      $suite  = new PHPUnit2_Framework_TestSuite(&quot;cookieTest&quot;);
+-      $result = PHPUnit2_TextUI_TestRunner::run($suite);
++      require_once &quot;PHPUnit/TextUI/TestRunner.php&quot;;
++      $suite  = new PHPUnit_Framework_TestSuite(&quot;cookieTest&quot;);
++      $result = PHPUnit_TextUI_TestRunner::run($suite);
+     }//}}}
+ 
+     /**
+@@ -96,7 +96,7 @@
+      */
+     public
+     function testSetSession() {//{{{
+-      cookie::setSession('test', 'v');
++      cookie::setSession('test', 'v', '/');
+       $expected = 'Set-Cookie: test=v';
+       $found = false;
+       foreach (headers_list() as $h) {
+@@ -117,7 +117,7 @@
+      */
+     public
+     function testSet1Year() {//{{{
+-      cookie::set1Year('test', 'v');
++      cookie::set1Year('test', 'v', '/');
+       $d = gmdate(self::cookieDateFmt, gmmktime(gmdate('H'), gmdate('i'), gmdate('s'), gmdate('m'), gmdate('d'), gmdate('Y') + 1));
+       $expected = &quot;Set-Cookie: test=v; expires=$d&quot;;
+       $found = false;
+@@ -139,7 +139,7 @@
+      */
+     public 
+     function testSet() {//{{{
+-      cookie::set('test', 'v', 1);
++      cookie::set('test', 'v', 1, '/');
+       $d = gmdate(self::cookieDateFmt, gmmktime(gmdate('H'), gmdate('i') + 1));
+       $expected = &quot;Set-Cookie: test=v; expires=$d&quot;;
+       $found = false;
+@@ -161,8 +161,8 @@
+      */
+     public
+     function testRemove() {//{{{
+-      cookie::setSession('test', 'v');
+-      cookie::remove('test');
++      cookie::setSession('test', 'v', '/');
++      cookie::remove('test', '/');
+       $d = gmdate(self::cookieDateFmt, gmmktime(gmdate('H'), gmdate('i'), gmdate('s') - 1, gmdate('m'), gmdate('d'), gmdate('Y') - 1));
+       $expected = &quot;Set-Cookie: test=deleted; expires=$d&quot;;
+       $found = false;
+@@ -180,7 +180,7 @@
+   }
+ 
+   // Call cookieTest::main() if this source file is executed directly.
+-  if (PHPUnit2_MAIN_METHOD == &quot;cookieTest::main&quot;) {
++  if (PHPUnit_MAIN_METHOD == &quot;cookieTest::main&quot;) {
+     cookieTest::main();
+   }
+ ?&gt;
+
+Modified: trunk/tests/dbTest.php
+===================================================================
+--- trunk/tests/dbTest.php	2007-01-16 16:23:41 UTC (rev 57)
++++ trunk/tests/dbTest.php	2008-07-24 12:26:10 UTC (rev 58)
+@@ -1,12 +1,12 @@
+ &lt;?php // vim: set et sta sw=2 ts=2 tw=0 enc=utf8 fenc=utf8 fdm=marker
+   // Call dbTest::main() if this source file is executed directly.
+-  if (! defined(&quot;PHPUnit2_MAIN_METHOD&quot;)) {
+-    define(&quot;PHPUnit2_MAIN_METHOD&quot;, &quot;dbTest::main&quot;);
++  if (! defined(&quot;PHPUnit_MAIN_METHOD&quot;)) {
++    define(&quot;PHPUnit_MAIN_METHOD&quot;, &quot;dbTest::main&quot;);
+   }
+-  require_once &quot;PHPUnit2/Framework/TestCase.php&quot;;
+-  require_once &quot;PHPUnit2/Framework/TestSuite.php&quot;;
++  require_once &quot;PHPUnit/Framework/TestCase.php&quot;;
++  require_once &quot;PHPUnit/Framework/TestSuite.php&quot;;
+   // You may remove the following line when all tests have been implemented.
+-  require_once &quot;PHPUnit2/Framework/IncompleteTestError.php&quot;;
++  require_once &quot;PHPUnit/Framework/IncompleteTestError.php&quot;;
+   require_once &quot;../classes/akfwk/db.php&quot;;
+   require_once &quot;../classes/akfwk/akfwkException.php&quot;;
+ 
+@@ -27,10 +27,10 @@
+ 
+   /**
+    * Test class for db.
+-   * Generated by PHPUnit2_Util_Skeleton on 2006-02-25 at 22:34:26.
++   * Generated by PHPUnit_Util_Skeleton on 2006-02-25 at 22:34:26.
+    */
+   class dbTest
+-  extends PHPUnit2_Framework_TestCase {
++  extends PHPUnit_Framework_TestCase {
+     /**
+      * Runs the test methods of this class.
+      *
+@@ -40,9 +40,9 @@
+     public
+     static
+     function main() {//{{{
+-      require_once &quot;PHPUnit2/TextUI/TestRunner.php&quot;;
+-      $suite  = new PHPUnit2_Framework_TestSuite(&quot;dbTest&quot;);
+-      $result = PHPUnit2_TextUI_TestRunner::run($suite);
++      require_once &quot;PHPUnit/TextUI/TestRunner.php&quot;;
++      $suite  = new PHPUnit_Framework_TestSuite(&quot;dbTest&quot;);
++      $result = PHPUnit_TextUI_TestRunner::run($suite);
+     }//}}}
+ 
+     /**
+@@ -128,7 +128,7 @@
+   }
+ 
+   // Call dbTest::main() if this source file is executed directly.
+-  if (PHPUnit2_MAIN_METHOD == &quot;dbTest::main&quot;) {
++  if (PHPUnit_MAIN_METHOD == &quot;dbTest::main&quot;) {
+     dbTest::main();
+   }
+ ?&gt;
+
+Modified: trunk/tests/queryBuilderTest.php
+===================================================================
+--- trunk/tests/queryBuilderTest.php	2007-01-16 16:23:41 UTC (rev 57)
++++ trunk/tests/queryBuilderTest.php	2008-07-24 12:26:10 UTC (rev 58)
+@@ -1,21 +1,21 @@
+ &lt;?php // vim: set et sta sw=2 ts=2 tw=0 enc=utf8 fenc=utf8 fdm=marker
+   // Call queryBuilderTest::main() if this source file is executed directly.
+-  if (!defined(&quot;PHPUnit2_MAIN_METHOD&quot;)) {
+-    define(&quot;PHPUnit2_MAIN_METHOD&quot;, &quot;queryBuilderTest::main&quot;);
++  if (!defined(&quot;PHPUnit_MAIN_METHOD&quot;)) {
++    define(&quot;PHPUnit_MAIN_METHOD&quot;, &quot;queryBuilderTest::main&quot;);
+   }
+ 
+-  require_once &quot;PHPUnit2/Framework/TestCase.php&quot;;
+-  require_once &quot;PHPUnit2/Framework/TestSuite.php&quot;;
++  require_once &quot;PHPUnit/Framework/TestCase.php&quot;;
++  require_once &quot;PHPUnit/Framework/TestSuite.php&quot;;
+ 
+   // You may remove the following line when all tests have been implemented.
+-  require_once &quot;PHPUnit2/Framework/IncompleteTestError.php&quot;;
++  require_once &quot;PHPUnit/Framework/IncompleteTestError.php&quot;;
+   require_once &quot;../classes/akfwk/queryBuilder.php&quot;;
+ 
+   /**
+    * Test class for queryBuilder.
+-   * Generated by PHPUnit2_Util_Skeleton on 2006-10-01 at 19:48:45.
++   * Generated by PHPUnit_Util_Skeleton on 2006-10-01 at 19:48:45.
+    */
+-  class queryBuilderTest extends PHPUnit2_Framework_TestCase {
++  class queryBuilderTest extends PHPUnit_Framework_TestCase {
+     /**
+      * Runs the test methods of this class.
+      *
+@@ -25,10 +25,10 @@
+     public
+     static
+     function main() {//{{{
+-      require_once &quot;PHPUnit2/TextUI/TestRunner.php&quot;;
++      require_once &quot;PHPUnit/TextUI/TestRunner.php&quot;;
+ 
+-      $suite  = new PHPUnit2_Framework_TestSuite(&quot;queryBuilderTest&quot;);
+-      $result = PHPUnit2_TextUI_TestRunner::run($suite);
++      $suite  = new PHPUnit_Framework_TestSuite(&quot;queryBuilderTest&quot;);
++      $result = PHPUnit_TextUI_TestRunner::run($suite);
+     }//}}}
+ 
+     /**
+@@ -180,7 +180,7 @@
+   }
+ 
+   // Call queryBuilderTest::main() if this source file is executed directly.
+-  if (PHPUnit2_MAIN_METHOD == &quot;queryBuilderTest::main&quot;) {
++  if (PHPUnit_MAIN_METHOD == &quot;queryBuilderTest::main&quot;) {
+     queryBuilderTest::main();
+   }
+ ?&gt;
+
+Modified: trunk/tests/xmlGeneratorTest.php
+===================================================================
+--- trunk/tests/xmlGeneratorTest.php	2007-01-16 16:23:41 UTC (rev 57)
++++ trunk/tests/xmlGeneratorTest.php	2008-07-24 12:26:10 UTC (rev 58)
+@@ -1,22 +1,22 @@
+ &lt;?php // vim: set et sta sw=2 ts=2 tw=0 enc=utf8 fenc=utf8 fdm=marker
+   // Call xmlGeneratorTest::main() if this source file is executed directly.
+-  if (! defined(&quot;PHPUnit2_MAIN_METHOD&quot;)) {
+-    define(&quot;PHPUnit2_MAIN_METHOD&quot;, &quot;xmlGeneratorTest::main&quot;);
++  if (! defined(&quot;PHPUnit_MAIN_METHOD&quot;)) {
++    define(&quot;PHPUnit_MAIN_METHOD&quot;, &quot;xmlGeneratorTest::main&quot;);
+   }
+-  require_once &quot;PHPUnit2/Framework/TestCase.php&quot;;
+-  require_once &quot;PHPUnit2/Framework/TestSuite.php&quot;;
++  require_once &quot;PHPUnit/Framework/TestCase.php&quot;;
++  require_once &quot;PHPUnit/Framework/TestSuite.php&quot;;
+   // You may remove the following line when all tests have been implemented.
+-  require_once &quot;PHPUnit2/Framework/IncompleteTestError.php&quot;;
++  require_once &quot;PHPUnit/Framework/IncompleteTestError.php&quot;;
+   require_once &quot;../classes/akfwk/xmlGenerator.php&quot;;
+   require_once &quot;../classes/akfwk/queryBuilder.php&quot;;
+   require_once &quot;../akfwk.inc.php&quot;;
+ 
+   /**
+    * Test class for xmlGenerator.
+-   * Generated by PHPUnit2_Util_Skeleton on 2006-02-25 at 22:34:27.
++   * Generated by PHPUnit_Util_Skeleton on 2006-02-25 at 22:34:27.
+    */
+   class xmlGeneratorTest
+-  extends PHPUnit2_Framework_TestCase {
++  extends PHPUnit_Framework_TestCase {
+     private $mdb2;
+ 
+     /**
+@@ -28,9 +28,9 @@
+     public
+     static
+     function main() {//{{{
+-      require_once &quot;PHPUnit2/TextUI/TestRunner.php&quot;;
+-      $suite  = new PHPUnit2_Framework_TestSuite(&quot;xmlGeneratorTest&quot;);
+-      $result = PHPUnit2_TextUI_TestRunner::run($suite);
++      require_once &quot;PHPUnit/TextUI/TestRunner.php&quot;;
++      $suite  = new PHPUnit_Framework_TestSuite(&quot;xmlGeneratorTest&quot;);
++      $result = PHPUnit_TextUI_TestRunner::run($suite);
+     }//}}}
+ 
+     /**
+@@ -341,7 +341,7 @@
+   }
+ 
+   // Call xmlGeneratorTest::main() if this source file is executed directly.
+-  if (PHPUnit2_MAIN_METHOD == &quot;xmlGeneratorTest::main&quot;) {
++  if (PHPUnit_MAIN_METHOD == &quot;xmlGeneratorTest::main&quot;) {
+     xmlGeneratorTest::main();
+   }
+ ?&gt;
+
+Modified: trunk/tests/xsltGeneratorTest.php
+===================================================================
+--- trunk/tests/xsltGeneratorTest.php	2007-01-16 16:23:41 UTC (rev 57)
++++ trunk/tests/xsltGeneratorTest.php	2008-07-24 12:26:10 UTC (rev 58)
+@@ -1,12 +1,12 @@
+ &lt;?php // vim: set et sta sw=2 ts=2 tw=0 enc=utf8 fenc=utf8 fdm=marker
+   // Call xsltGeneratorTest::main() if this source file is executed directly.
+-  if (! defined(&quot;PHPUnit2_MAIN_METHOD&quot;)) {
+-    define(&quot;PHPUnit2_MAIN_METHOD&quot;, &quot;xsltGeneratorTest::main&quot;);
++  if (! defined(&quot;PHPUnit_MAIN_METHOD&quot;)) {
++    define(&quot;PHPUnit_MAIN_METHOD&quot;, &quot;xsltGeneratorTest::main&quot;);
+   }
+-  require_once &quot;PHPUnit2/Framework/TestCase.php&quot;;
+-  require_once &quot;PHPUnit2/Framework/TestSuite.php&quot;;
++  require_once &quot;PHPUnit/Framework/TestCase.php&quot;;
++  require_once &quot;PHPUnit/Framework/TestSuite.php&quot;;
+   // You may remove the following line when all tests have been implemented.
+-  require_once &quot;PHPUnit2/Framework/IncompleteTestError.php&quot;;
++  require_once &quot;PHPUnit/Framework/IncompleteTestError.php&quot;;
+   require_once &quot;../classes/akfwk/xsltGenerator.php&quot;;
+   require_once &quot;../classes/akfwk/xmlGenerator.php&quot;;
+   require_once &quot;../classes/akfwk/queryBuilder.php&quot;;
+@@ -14,10 +14,10 @@
+ 
+   /**
+    * Test class for xsltGenerator.
+-   * Generated by PHPUnit2_Util_Skeleton on 2006-02-25 at 22:34:29.
++   * Generated by PHPUnit_Util_Skeleton on 2006-02-25 at 22:34:29.
+    */
+   class xsltGeneratorTest
+-  extends PHPUnit2_Framework_TestCase {
++  extends PHPUnit_Framework_TestCase {
+     private $mdb2;
+     
+     /**
+@@ -29,9 +29,9 @@
+     public
+     static
+     function main() {//{{{
+-      require_once &quot;PHPUnit2/TextUI/TestRunner.php&quot;;
+-      $suite  = new PHPUnit2_Framework_TestSuite(&quot;xsltGeneratorTest&quot;);
+-      $result = PHPUnit2_TextUI_TestRunner::run($suite);
++      require_once &quot;PHPUnit/TextUI/TestRunner.php&quot;;
++      $suite  = new PHPUnit_Framework_TestSuite(&quot;xsltGeneratorTest&quot;);
++      $result = PHPUnit_TextUI_TestRunner::run($suite);
+     }//}}}
+ 
+     /**
+@@ -471,7 +471,7 @@
+   }
+ 
+   // Call xsltGeneratorTest::main() if this source file is executed directly.
+-  if (PHPUnit2_MAIN_METHOD == &quot;xsltGeneratorTest::main&quot;) {
++  if (PHPUnit_MAIN_METHOD == &quot;xsltGeneratorTest::main&quot;) {
+     xsltGeneratorTest::main();
+   }
+ ?&gt;
+
+Modified: trunk/tests/xsltTest.php
+===================================================================
+--- trunk/tests/xsltTest.php	2007-01-16 16:23:41 UTC (rev 57)
++++ trunk/tests/xsltTest.php	2008-07-24 12:26:10 UTC (rev 58)
+@@ -1,20 +1,20 @@
+ &lt;?php // vim: set et sta sw=2 ts=2 tw=0 enc=utf8 fenc=utf8 fdm=marker
+   // Call xsltTest::main() if this source file is executed directly.
+-  if (! defined(&quot;PHPUnit2_MAIN_METHOD&quot;)) {
+-    define(&quot;PHPUnit2_MAIN_METHOD&quot;, &quot;xsltTest::main&quot;);
++  if (! defined(&quot;PHPUnit_MAIN_METHOD&quot;)) {
++    define(&quot;PHPUnit_MAIN_METHOD&quot;, &quot;xsltTest::main&quot;);
+   }
+-  require_once &quot;PHPUnit2/Framework/TestCase.php&quot;;
+-  require_once &quot;PHPUnit2/Framework/TestSuite.php&quot;;
++  require_once &quot;PHPUnit/Framework/TestCase.php&quot;;
++  require_once &quot;PHPUnit/Framework/TestSuite.php&quot;;
+   // You may remove the following line when all tests have been implemented.
+-  require_once &quot;PHPUnit2/Framework/IncompleteTestError.php&quot;;
++  require_once &quot;PHPUnit/Framework/IncompleteTestError.php&quot;;
+   require_once &quot;../classes/akfwk/xslt.php&quot;;
+ 
+   /**
+    * Test class for xslt.
+-   * Generated by PHPUnit2_Util_Skeleton on 2006-02-25 at 22:34:28.
++   * Generated by PHPUnit_Util_Skeleton on 2006-02-25 at 22:34:28.
+    */
+   class xsltTest
+-  extends PHPUnit2_Framework_TestCase {
++  extends PHPUnit_Framework_TestCase {
+     /**
+      * Runs the test methods of this class.
+      *
+@@ -24,9 +24,9 @@
+     public
+     static
+     function main() {//{{{
+-      require_once &quot;PHPUnit2/TextUI/TestRunner.php&quot;;
+-      $suite  = new PHPUnit2_Framework_TestSuite(&quot;xsltTest&quot;);
+-      $result = PHPUnit2_TextUI_TestRunner::run($suite);
++      require_once &quot;PHPUnit/TextUI/TestRunner.php&quot;;
++      $suite  = new PHPUnit_Framework_TestSuite(&quot;xsltTest&quot;);
++      $result = PHPUnit_TextUI_TestRunner::run($suite);
+     }//}}}
+ 
+     /**
+@@ -66,7 +66,7 @@
+   }
+ 
+   // Call xsltTest::main() if this source file is executed directly.
+-  if (PHPUnit2_MAIN_METHOD == &quot;xsltTest::main&quot;) {
++  if (PHPUnit_MAIN_METHOD == &quot;xsltTest::main&quot;) {
+     xsltTest::main();
+   }
+ ?&gt;
+
+
+</PRE>
+
+<!--endarticle-->
+    <HR>
+    <P><UL>
+        <!--threads-->
+	
+	
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#1">[ date ]</a>
+              <a href="thread.html#1">[ thread ]</a>
+              <a href="subject.html#1">[ subject ]</a>
+              <a href="author.html#1">[ author ]</a>
+         </LI>
+       </UL>
+
+<hr>
+<a href="https://lists.berlios.de/mailman/listinfo/animekafwk-svn">More information about the Animekafwk-svn
+mailing list</a><br>
+</body></html>

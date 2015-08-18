@@ -1,0 +1,244 @@
+From jrd at users.berlios.de  Wed Aug  6 16:13:49 2008
+From: jrd at users.berlios.de (jrd at users.berlios.de)
+Date: Wed, 6 Aug 2008 16:13:49 +0200
+Subject: [Animekafwk-svn] r59 - trunk/classes/akfwk
+Message-ID: <200808061413.m76EDnMq011467@sheep.berlios.de>
+
+Author: jrd
+Date: 2008-08-06 16:13:47 +0200 (Wed, 06 Aug 2008)
+New Revision: 59
+
+Modified:
+   trunk/classes/akfwk/SQLQueries.php
+Log:
+FIX: Licence.
+
+
+Modified: trunk/classes/akfwk/SQLQueries.php
+===================================================================
+--- trunk/classes/akfwk/SQLQueries.php	2008-07-24 12:26:10 UTC (rev 58)
++++ trunk/classes/akfwk/SQLQueries.php	2008-08-06 14:13:47 UTC (rev 59)
+@@ -1,7 +1,21 @@
+ <?php // vim: set et sta sw=2 ts=2 tw=0 enc=utf8 fenc=utf8 fdm=marker
+   /* {{{ LICENCE
+-   Animeka v2.02
+-   Copyright (C) 2006  Animeka Network
++  Animeka framework
++  Copyright (C) 2005  Cyrille Pontvieux
++
++  This program is free software; you can redistribute it and/or modify
++  it under the terms of the GNU General Public License as published by
++  the Free Software Foundation; either version 2 of the License, or
++  (at your option) any later version.
++
++  This program is distributed in the hope that it will be useful,
++  but WITHOUT ANY WARRANTY; without even the implied warranty of
++  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
++  GNU General Public License for more details.
++
++  You should have received a copy of the GNU General Public License
++  along with this program; if not, write to the Free Software
++  Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+   }}} */
+ ?>
+ <?php
+
+
+
+From jrd at users.berlios.de  Wed Aug  6 16:17:48 2008
+From: jrd at users.berlios.de (jrd at users.berlios.de)
+Date: Wed, 6 Aug 2008 16:17:48 +0200
+Subject: [Animekafwk-svn] r60 - tags tags/v0.6b/classes/akfwk trunk
+	trunk/akfwk
+Message-ID: <200808061417.m76EHmSV011796@sheep.berlios.de>
+
+Author: jrd
+Date: 2008-08-06 16:17:44 +0200 (Wed, 06 Aug 2008)
+New Revision: 60
+
+Added:
+   tags/v0.6b/
+   tags/v0.6b/classes/akfwk/SQLQueries.php
+Removed:
+   tags/v0.6b/classes/akfwk/SQLQueries.php
+Modified:
+   trunk/akfwk.inc.php
+   trunk/akfwk/README
+   trunk/akfwk/VERSION
+Log:
+RLZ: version 0.6 beta.
+
+
+Copied: tags/v0.6b (from rev 58, trunk)
+
+Deleted: tags/v0.6b/classes/akfwk/SQLQueries.php
+===================================================================
+--- trunk/classes/akfwk/SQLQueries.php	2008-07-24 12:26:10 UTC (rev 58)
++++ tags/v0.6b/classes/akfwk/SQLQueries.php	2008-08-06 14:17:44 UTC (rev 60)
+@@ -1,125 +0,0 @@
+-<?php // vim: set et sta sw=2 ts=2 tw=0 enc=utf8 fenc=utf8 fdm=marker
+-  /* {{{ LICENCE
+-   Animeka v2.02
+-   Copyright (C) 2006  Animeka Network
+-  }}} */
+-?>
+-<?php
+-  /**
+-   * SQLQueries
+-   * 
+-   * @package animekafwk
+-   * @version alpha-svn
+-   * @copyright Cyrille Pontvieux
+-   * @author Cyrille Pontvieux <jrd at users.berlios.de> 
+-   * @license GPL
+-   */
+-  class SQLQueries {
+-
+-    static private $instance = null;
+-
+-    private $cwd;
+-
+-    private $queries;
+-    
+-    public
+-    static
+-    function get() {//{{{
+-      if (self::$instance == null) {
+-        self::$instance = new SQLQueries();
+-      }
+-      return self::$instance;
+-    }//}}}
+-
+-    private
+-    function __construct() {//{{{
+-      // Pour contourner un pb de path du destructeur.
+-      $this->cwd = getcwd();
+-      require(CST_ROOT_PATH.'/sql_queries.inc.php');
+-      $this->queries = $sqlQueries;
+-    }//}}}
+-
+-    function __destruct() {//{{{
+-      // Pour contourner un pb de path du destructeur.
+-      chdir($this->cwd);
+-    }//}}}
+-
+-    public
+-    function getSQL($name) {//{{{
+-      $q = $this->queries;
+-      if (!isset($q[$name]) || !is_array($q[$name]) || !isset($q[$name]['sql'])) {
+-        throw new akfwkException("'$name' must be a defined array querie in 'sql_queries.inc.php'\n");
+-      }
+-      $args = func_get_args();
+-      $from = array();
+-      $to = array();
+-      $n = count($args);
+-      for ($p = 1 ; $p < $n ; $p++) {
+-        $from[] = '{' . $p . '}';
+-        $to[] = $args[$p];
+-      }
+-      $a = $q[$name];
+-      $sql = str_replace($from, $to, $a['sql']);
+-      return $sql;
+-    }//}}}
+-
+-    public
+-    function getBuilder($name) {//{{{
+-      $q = $this->queries;
+-      if (!isset($q[$name]) || !is_array($q[$name]) || !isset($q[$name]['sql'])) {
+-        throw new akfwkException("'$name' must be a defined array querie in 'sql_queries.inc.php'\n");
+-      }
+-      $args = func_get_args();
+-      $from = array();
+-      $to = array();
+-      $n = count($args);
+-      for ($p = 1 ; $p < $n ; $p++) {
+-        $from[] = '{' . $p . '}';
+-        $to[] = $args[$p];
+-      }
+-      $a = $q[$name];
+-      $name = str_replace($from, $to, $name);
+-      $type = isset($a['type']) ? $a['type'] : queryBuilder::S;
+-      $sql = str_replace($from, $to, $a['sql']);
+-      $offset = isset($a['offset']) ? str_replace($from, $to, $a['offset']) : null;
+-      $limit = isset($a['limit']) ? str_replace($from, $to, $a['limit']) : null;
+-      $tables = isset($a['tables']) ? $a['tables'] : array();
+-      foreach ($tables as $t => $pks) {
+-        if ($pks == null) {
+-          $pks = array();
+-        } else {
+-          foreach ($pks as $k => $v) {
+-            $pks[$k] = str_replace($from, $to, $v);
+-          }
+-        }
+-        $tables[$t] = $pks;
+-      }
+-      $lobFields = isset($a['lobFields']) ? $a['lobFields'] : array();
+-      foreach ($lobFields as $f => $lob) {
+-        $lob['value'] = str_replace($from, $to, $lob['value']);
+-        $lobFields[$f] = $lob;
+-      }
+-      $validity = isset($a['validity']) ? $a['validity'] : 0;
+-      $useCache = isset($a['useCache']) ? $a['useCache'] : true;
+-      $ret = null;
+-      if ($type == queryBuilder::S) {
+-        $ret = new selectBuilder($sql, $name);
+-      } elseif ($type == queryBuilder::U) {
+-        $ret = new updateBuilder($sql, $name);
+-      } elseif ($type == queryBuiilder::I) {
+-        $ret = new insertBuilder($sql, $name);
+-      } elseif ($type == queryBuilder::D) {
+-        $ret = new deleteBuilder($sql, $name);
+-      }
+-      if ($ret) {
+-        $ret->setOffset($offset);
+-        $ret->setLimit($limit);
+-        $ret->setTables($tables);
+-        $ret->setLobFields($lobFields);
+-        $ret->setValidity($validity);
+-        $ret->setUseCache($useCache);
+-      }
+-      return $ret;
+-    }//}}}
+-  }
+-?>
+
+Copied: tags/v0.6b/classes/akfwk/SQLQueries.php (from rev 59, trunk/classes/akfwk/SQLQueries.php)
+
+Modified: trunk/akfwk/README
+===================================================================
+--- trunk/akfwk/README	2008-08-06 14:13:47 UTC (rev 59)
++++ trunk/akfwk/README	2008-08-06 14:17:44 UTC (rev 60)
+@@ -1,5 +1,5 @@
+ /------------------------\
+-| Animeka framework v0.5 |
++| Animeka framework v0.7 |
+ \------------------------/
+ http://animekafwk.berlios.de
+ 
+
+Modified: trunk/akfwk/VERSION
+===================================================================
+--- trunk/akfwk/VERSION	2008-08-06 14:13:47 UTC (rev 59)
++++ trunk/akfwk/VERSION	2008-08-06 14:17:44 UTC (rev 60)
+@@ -1,3 +1,3 @@
+-VER=0.6
++VER=0.7
+ VER_STR="v.${VER} beta"
+ VER_RLZ="v${VER}b"
+
+Modified: trunk/akfwk.inc.php
+===================================================================
+--- trunk/akfwk.inc.php	2008-08-06 14:13:47 UTC (rev 59)
++++ trunk/akfwk.inc.php	2008-08-06 14:17:44 UTC (rev 60)
+@@ -22,7 +22,7 @@
+   /******************************************************************************
+   Animkea framework initialization
+   ******************************************************************************/
+-  define('CST_AKFWK_VER', 0.6);
++  define('CST_AKFWK_VER', 0.7);
+   define('CST_AKFWK_VER_STR', 'v.' . CST_AKFWK_VER . ' beta');
+   require_once('akfwk.cfg');
+   require_once('MDB2.php');
+
+
+

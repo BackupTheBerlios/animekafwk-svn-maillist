@@ -1,0 +1,247 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<HTML>
+ <HEAD>
+   <TITLE> [Animekafwk-svn] r60 - tags tags/v0.6b/classes/akfwk trunk	trunk/akfwk
+   </TITLE>
+   <LINK REL="Index" HREF="http://lists.berlios.de/pipermail/animekafwk-svn/Week-of-Mon-20080804/index.html" >
+   <LINK REL="made" HREF="mailto:animekafwk-svn%40lists.berlios.de?Subject=Re%3A%20%5BAnimekafwk-svn%5D%20r60%20-%20tags%20tags/v0.6b/classes/akfwk%20trunk%0A%09trunk/akfwk&In-Reply-To=%3C200808061417.m76EHmSV011796%40sheep.berlios.de%3E">
+   <META NAME="robots" CONTENT="index,nofollow">
+   <style type="text/css">
+       pre {
+           white-space: pre-wrap;       /* css-2.1, curent FF, Opera, Safari */
+           }
+   </style>
+   <META http-equiv="Content-Type" content="text/html; charset=us-ascii">
+   <LINK REL="Previous"  HREF="000002.html">
+   
+ </HEAD>
+ <BODY BGCOLOR="#ffffff">
+   <H1>[Animekafwk-svn] r60 - tags tags/v0.6b/classes/akfwk trunk	trunk/akfwk</H1>
+    <B>jrd at users.berlios.de</B> 
+    <A HREF="mailto:animekafwk-svn%40lists.berlios.de?Subject=Re%3A%20%5BAnimekafwk-svn%5D%20r60%20-%20tags%20tags/v0.6b/classes/akfwk%20trunk%0A%09trunk/akfwk&In-Reply-To=%3C200808061417.m76EHmSV011796%40sheep.berlios.de%3E"
+       TITLE="[Animekafwk-svn] r60 - tags tags/v0.6b/classes/akfwk trunk	trunk/akfwk">jrd at users.berlios.de
+       </A><BR>
+    <I>Wed Aug  6 16:17:48 CEST 2008</I>
+    <P><UL>
+        <LI>Previous message: <A HREF="000002.html">[Animekafwk-svn] r59 - trunk/classes/akfwk
+</A></li>
+        
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#3">[ date ]</a>
+              <a href="thread.html#3">[ thread ]</a>
+              <a href="subject.html#3">[ subject ]</a>
+              <a href="author.html#3">[ author ]</a>
+         </LI>
+       </UL>
+    <HR>  
+<!--beginarticle-->
+<PRE>Author: jrd
+Date: 2008-08-06 16:17:44 +0200 (Wed, 06 Aug 2008)
+New Revision: 60
+
+Added:
+   tags/v0.6b/
+   tags/v0.6b/classes/akfwk/SQLQueries.php
+Removed:
+   tags/v0.6b/classes/akfwk/SQLQueries.php
+Modified:
+   trunk/akfwk.inc.php
+   trunk/akfwk/README
+   trunk/akfwk/VERSION
+Log:
+RLZ: version 0.6 beta.
+
+
+Copied: tags/v0.6b (from rev 58, trunk)
+
+Deleted: tags/v0.6b/classes/akfwk/SQLQueries.php
+===================================================================
+--- trunk/classes/akfwk/SQLQueries.php	2008-07-24 12:26:10 UTC (rev 58)
++++ tags/v0.6b/classes/akfwk/SQLQueries.php	2008-08-06 14:17:44 UTC (rev 60)
+@@ -1,125 +0,0 @@
+-&lt;?php // vim: set et sta sw=2 ts=2 tw=0 enc=utf8 fenc=utf8 fdm=marker
+-  /* {{{ LICENCE
+-   Animeka v2.02
+-   Copyright (C) 2006  Animeka Network
+-  }}} */
+-?&gt;
+-&lt;?php
+-  /**
+-   * SQLQueries
+-   * 
+-   * @package animekafwk
+-   * @version alpha-svn
+-   * @copyright Cyrille Pontvieux
+-   * @author Cyrille Pontvieux &lt;<A HREF="https://lists.berlios.de/mailman/listinfo/animekafwk-svn">jrd at users.berlios.de</A>&gt; 
+-   * @license GPL
+-   */
+-  class SQLQueries {
+-
+-    static private $instance = null;
+-
+-    private $cwd;
+-
+-    private $queries;
+-    
+-    public
+-    static
+-    function get() {//{{{
+-      if (self::$instance == null) {
+-        self::$instance = new SQLQueries();
+-      }
+-      return self::$instance;
+-    }//}}}
+-
+-    private
+-    function __construct() {//{{{
+-      // Pour contourner un pb de path du destructeur.
+-      $this-&gt;cwd = getcwd();
+-      require(CST_ROOT_PATH.'/sql_queries.inc.php');
+-      $this-&gt;queries = $sqlQueries;
+-    }//}}}
+-
+-    function __destruct() {//{{{
+-      // Pour contourner un pb de path du destructeur.
+-      chdir($this-&gt;cwd);
+-    }//}}}
+-
+-    public
+-    function getSQL($name) {//{{{
+-      $q = $this-&gt;queries;
+-      if (!isset($q[$name]) || !is_array($q[$name]) || !isset($q[$name]['sql'])) {
+-        throw new akfwkException(&quot;'$name' must be a defined array querie in 'sql_queries.inc.php'\n&quot;);
+-      }
+-      $args = func_get_args();
+-      $from = array();
+-      $to = array();
+-      $n = count($args);
+-      for ($p = 1 ; $p &lt; $n ; $p++) {
+-        $from[] = '{' . $p . '}';
+-        $to[] = $args[$p];
+-      }
+-      $a = $q[$name];
+-      $sql = str_replace($from, $to, $a['sql']);
+-      return $sql;
+-    }//}}}
+-
+-    public
+-    function getBuilder($name) {//{{{
+-      $q = $this-&gt;queries;
+-      if (!isset($q[$name]) || !is_array($q[$name]) || !isset($q[$name]['sql'])) {
+-        throw new akfwkException(&quot;'$name' must be a defined array querie in 'sql_queries.inc.php'\n&quot;);
+-      }
+-      $args = func_get_args();
+-      $from = array();
+-      $to = array();
+-      $n = count($args);
+-      for ($p = 1 ; $p &lt; $n ; $p++) {
+-        $from[] = '{' . $p . '}';
+-        $to[] = $args[$p];
+-      }
+-      $a = $q[$name];
+-      $name = str_replace($from, $to, $name);
+-      $type = isset($a['type']) ? $a['type'] : queryBuilder::S;
+-      $sql = str_replace($from, $to, $a['sql']);
+-      $offset = isset($a['offset']) ? str_replace($from, $to, $a['offset']) : null;
+-      $limit = isset($a['limit']) ? str_replace($from, $to, $a['limit']) : null;
+-      $tables = isset($a['tables']) ? $a['tables'] : array();
+-      foreach ($tables as $t =&gt; $pks) {
+-        if ($pks == null) {
+-          $pks = array();
+-        } else {
+-          foreach ($pks as $k =&gt; $v) {
+-            $pks[$k] = str_replace($from, $to, $v);
+-          }
+-        }
+-        $tables[$t] = $pks;
+-      }
+-      $lobFields = isset($a['lobFields']) ? $a['lobFields'] : array();
+-      foreach ($lobFields as $f =&gt; $lob) {
+-        $lob['value'] = str_replace($from, $to, $lob['value']);
+-        $lobFields[$f] = $lob;
+-      }
+-      $validity = isset($a['validity']) ? $a['validity'] : 0;
+-      $useCache = isset($a['useCache']) ? $a['useCache'] : true;
+-      $ret = null;
+-      if ($type == queryBuilder::S) {
+-        $ret = new selectBuilder($sql, $name);
+-      } elseif ($type == queryBuilder::U) {
+-        $ret = new updateBuilder($sql, $name);
+-      } elseif ($type == queryBuiilder::I) {
+-        $ret = new insertBuilder($sql, $name);
+-      } elseif ($type == queryBuilder::D) {
+-        $ret = new deleteBuilder($sql, $name);
+-      }
+-      if ($ret) {
+-        $ret-&gt;setOffset($offset);
+-        $ret-&gt;setLimit($limit);
+-        $ret-&gt;setTables($tables);
+-        $ret-&gt;setLobFields($lobFields);
+-        $ret-&gt;setValidity($validity);
+-        $ret-&gt;setUseCache($useCache);
+-      }
+-      return $ret;
+-    }//}}}
+-  }
+-?&gt;
+
+Copied: tags/v0.6b/classes/akfwk/SQLQueries.php (from rev 59, trunk/classes/akfwk/SQLQueries.php)
+
+Modified: trunk/akfwk/README
+===================================================================
+--- trunk/akfwk/README	2008-08-06 14:13:47 UTC (rev 59)
++++ trunk/akfwk/README	2008-08-06 14:17:44 UTC (rev 60)
+@@ -1,5 +1,5 @@
+ /------------------------\
+-| Animeka framework v0.5 |
++| Animeka framework v0.7 |
+ \------------------------/
+ <A HREF="http://animekafwk.berlios.de">http://animekafwk.berlios.de</A>
+ 
+
+Modified: trunk/akfwk/VERSION
+===================================================================
+--- trunk/akfwk/VERSION	2008-08-06 14:13:47 UTC (rev 59)
++++ trunk/akfwk/VERSION	2008-08-06 14:17:44 UTC (rev 60)
+@@ -1,3 +1,3 @@
+-VER=0.6
++VER=0.7
+ VER_STR=&quot;v.${VER} beta&quot;
+ VER_RLZ=&quot;v${VER}b&quot;
+
+Modified: trunk/akfwk.inc.php
+===================================================================
+--- trunk/akfwk.inc.php	2008-08-06 14:13:47 UTC (rev 59)
++++ trunk/akfwk.inc.php	2008-08-06 14:17:44 UTC (rev 60)
+@@ -22,7 +22,7 @@
+   /******************************************************************************
+   Animkea framework initialization
+   ******************************************************************************/
+-  define('CST_AKFWK_VER', 0.6);
++  define('CST_AKFWK_VER', 0.7);
+   define('CST_AKFWK_VER_STR', 'v.' . CST_AKFWK_VER . ' beta');
+   require_once('akfwk.cfg');
+   require_once('MDB2.php');
+
+
+</PRE>
+
+<!--endarticle-->
+    <HR>
+    <P><UL>
+        <!--threads-->
+	<LI>Previous message: <A HREF="000002.html">[Animekafwk-svn] r59 - trunk/classes/akfwk
+</A></li>
+	
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#3">[ date ]</a>
+              <a href="thread.html#3">[ thread ]</a>
+              <a href="subject.html#3">[ subject ]</a>
+              <a href="author.html#3">[ author ]</a>
+         </LI>
+       </UL>
+
+<hr>
+<a href="https://lists.berlios.de/mailman/listinfo/animekafwk-svn">More information about the Animekafwk-svn
+mailing list</a><br>
+</body></html>

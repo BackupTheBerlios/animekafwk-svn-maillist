@@ -1,0 +1,153 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<HTML>
+ <HEAD>
+   <TITLE> [Animekafwk-svn] r57 - trunk/classes/akfwk
+   </TITLE>
+   <LINK REL="Index" HREF="http://lists.berlios.de/pipermail/animekafwk-svn/Week-of-Mon-20070115/index.html" >
+   <LINK REL="made" HREF="mailto:animekafwk-svn%40lists.berlios.de?Subject=Re%3A%20%5BAnimekafwk-svn%5D%20r57%20-%20trunk/classes/akfwk&In-Reply-To=%3C200701161623.l0GGNfO1019135%40sheep.berlios.de%3E">
+   <META NAME="robots" CONTENT="index,nofollow">
+   <style type="text/css">
+       pre {
+           white-space: pre-wrap;       /* css-2.1, curent FF, Opera, Safari */
+           }
+   </style>
+   <META http-equiv="Content-Type" content="text/html; charset=us-ascii">
+   
+   
+ </HEAD>
+ <BODY BGCOLOR="#ffffff">
+   <H1>[Animekafwk-svn] r57 - trunk/classes/akfwk</H1>
+    <B>jrd at users.berlios.de</B> 
+    <A HREF="mailto:animekafwk-svn%40lists.berlios.de?Subject=Re%3A%20%5BAnimekafwk-svn%5D%20r57%20-%20trunk/classes/akfwk&In-Reply-To=%3C200701161623.l0GGNfO1019135%40sheep.berlios.de%3E"
+       TITLE="[Animekafwk-svn] r57 - trunk/classes/akfwk">jrd at users.berlios.de
+       </A><BR>
+    <I>Tue Jan 16 17:23:41 CET 2007</I>
+    <P><UL>
+        
+        
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#0">[ date ]</a>
+              <a href="thread.html#0">[ thread ]</a>
+              <a href="subject.html#0">[ subject ]</a>
+              <a href="author.html#0">[ author ]</a>
+         </LI>
+       </UL>
+    <HR>  
+<!--beginarticle-->
+<PRE>Author: jrd
+Date: 2007-01-16 17:23:41 +0100 (Tue, 16 Jan 2007)
+New Revision: 57
+
+Modified:
+   trunk/classes/akfwk/cache.php
+   trunk/classes/akfwk/xmlGenerator.php
+   trunk/classes/akfwk/xsltGenerator.php
+Log:
+UPD: Multiple XML files for an XSL is now also forking when the cache is disabled.
+
+
+Modified: trunk/classes/akfwk/cache.php
+===================================================================
+--- trunk/classes/akfwk/cache.php	2006-12-24 12:28:46 UTC (rev 56)
++++ trunk/classes/akfwk/cache.php	2007-01-16 16:23:41 UTC (rev 57)
+@@ -36,6 +36,7 @@
+     private $md5;
+     private $ext;
+     private $validity;
++    private $force;
+     private $cacheFileRoot;
+     private $cacheFile;
+     const table = 'cache';
+@@ -46,13 +47,15 @@
+      * @param key block ID (ex: &quot;[animes][episodes]&quot; )
+      * @param ext extension (facultative) to use
+      * @param validity_time (facultative) in minutes
++     * @param force use the cache even if CST_CACHE_ENABLED = false (by default force=false). The cache will still always says it is not in cache.
+      */ 
+     public
+-    function __construct($key, $ext = '', $validity = 0) {//{{{
++    function __construct($key, $ext = '', $validity = 0, $force = false) {//{{{
+       $this-&gt;key = $key;
+       $this-&gt;md5 = md5($this-&gt;key);
+       $this-&gt;ext = $ext;
+       $this-&gt;validity = 60 * $validity;
++      $this-&gt;force = $force;
+       if ($ext == '') {
+         $pre = '';
+       } else {
+@@ -126,7 +129,7 @@
+      */
+     public
+     function putData($data) {//{{{
+-      if (CST_CACHE_ENABLED) {
++      if (CST_CACHE_ENABLED || $this-&gt;force) {
+         @unlink($this-&gt;cacheFile);
+         file_put_contents($this-&gt;cacheFile, $data);
+         $ts = MDB2_Date::unix2Mdbstamp(filemtime($this-&gt;cacheFile));
+@@ -155,7 +158,7 @@
+      */
+     public
+     function getData() {//{{{
+-      if (CST_CACHE_ENABLED &amp;&amp; file_exists($this-&gt;cacheFile)) {
++      if ((CST_CACHE_ENABLED || $this-&gt;force) &amp;&amp; file_exists($this-&gt;cacheFile)) {
+         return file_get_contents($this-&gt;cacheFile);
+       } else {
+         return null;
+
+Modified: trunk/classes/akfwk/xmlGenerator.php
+===================================================================
+--- trunk/classes/akfwk/xmlGenerator.php	2006-12-24 12:28:46 UTC (rev 56)
++++ trunk/classes/akfwk/xmlGenerator.php	2007-01-16 16:23:41 UTC (rev 57)
+@@ -134,12 +134,13 @@
+     /**
+      * 
+      * @access public
++     * @param force force to use the cache.
+      * @return cache file path
+      */
+     public 
+-    function getCacheFilePath() {//{{{
+-      if ($this-&gt;action == queryBuilder::S &amp;&amp; $this-&gt;useCache) {
+-        $cacheXML = new cache($this-&gt;key, self::ext, $this-&gt;validity);
++    function getCacheFilePath($force = false) {//{{{
++      if ($this-&gt;action == queryBuilder::S &amp;&amp; ($this-&gt;useCache || $force)) {
++        $cacheXML = new cache($this-&gt;key, self::ext, $this-&gt;validity, $force);
+         if (! $cacheXML-&gt;getStatus()) {
+           $cacheXML-&gt;putData($this-&gt;generateXML());
+         }
+
+Modified: trunk/classes/akfwk/xsltGenerator.php
+===================================================================
+--- trunk/classes/akfwk/xsltGenerator.php	2006-12-24 12:28:46 UTC (rev 56)
++++ trunk/classes/akfwk/xsltGenerator.php	2007-01-16 16:23:41 UTC (rev 57)
+@@ -142,7 +142,7 @@
+       $this-&gt;XMLClasses = array();
+       foreach ($XMLClasses as $xml) {
+         $this-&gt;useCache &amp;= $xml-&gt;getUseCache();
+-        $this-&gt;xml .= &quot;  &lt;xml id=\&quot;$i\&quot; href=\&quot;{$xml-&gt;getCacheFilePath()}\&quot;/&gt;\n&quot;;
++        $this-&gt;xml .= &quot;  &lt;xml id=\&quot;$i\&quot; href=\&quot;&quot;. $xml-&gt;getCacheFilePath(true) . &quot;\&quot;/&gt;\n&quot;;
+         $i++;
+         $salts = $xml-&gt;getSalts();
+         if (count($salts) == 1) {
+
+
+</PRE>
+
+<!--endarticle-->
+    <HR>
+    <P><UL>
+        <!--threads-->
+	
+	
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#0">[ date ]</a>
+              <a href="thread.html#0">[ thread ]</a>
+              <a href="subject.html#0">[ subject ]</a>
+              <a href="author.html#0">[ author ]</a>
+         </LI>
+       </UL>
+
+<hr>
+<a href="https://lists.berlios.de/mailman/listinfo/animekafwk-svn">More information about the Animekafwk-svn
+mailing list</a><br>
+</body></html>
